@@ -10,7 +10,6 @@ USERS_CSV = os.path.join(DATA_DIR, 'users.csv')
 PROGRESS_CSV = os.path.join(DATA_DIR, 'progress.csv')
 INVENTORY_CSV = os.path.join(DATA_DIR, 'inventory.csv')
 
-# Ensure data directory and files exist
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def migrate_users_csv():
@@ -58,8 +57,6 @@ def migrate_users_csv():
             writer = csv.writer(f)
             writer.writerows(new_rows)
 
-    # Sync points with progress (Backfill points for existing progress)
-    # 1. Count completions per user
     progress_counts = {}
     if os.path.exists(PROGRESS_CSV):
         with open(PROGRESS_CSV, mode='r', newline='', encoding='utf-8') as f:
@@ -68,7 +65,6 @@ def migrate_users_csv():
                 uname = row['username']
                 progress_counts[uname] = progress_counts.get(uname, 0) + 1
     
-    # 2. Update users.csv with correct point totals (100 pts per task)
     updated_users = []
     headers = []
     with open(USERS_CSV, mode='r', newline='', encoding='utf-8') as f:
@@ -98,7 +94,6 @@ if not os.path.exists(INVENTORY_CSV):
         writer = csv.writer(f)
         writer.writerow(['username', 'item_id', 'purchased_at'])
 
-# Treasure Definitions
 TREASURES = {
     't_01': {'name': '魔法杖', 'cost': 100, 'icon': 'fa-wand-magic-sparkles', 'color': 'text-purple-400'},
     't_02': {'name': '勇者之盾', 'cost': 200, 'icon': 'fa-shield-halved', 'color': 'text-blue-400'},
@@ -183,7 +178,6 @@ def save_progress():
     if not username or not unit_id:
         return jsonify({'success': False, 'message': '資料不完整'})
 
-    # Check if already completed to avoid duplicate entries
     already_completed = False
     with open(PROGRESS_CSV, mode='r', newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -235,8 +229,7 @@ def rename_user():
 
     if not username or not new_display_name:
         return jsonify({'success': False, 'message': '資料不完整'})
-
-    # Read and update
+        
     rows = []
     updated = False
     with open(USERS_CSV, mode='r', newline='', encoding='utf-8') as f:
@@ -276,7 +269,6 @@ def purchase_item():
     item = TREASURES[item_id]
     cost = item['cost']
 
-    # 1. Check user points
     user_found = False
     new_points = 0
     users = []
@@ -298,14 +290,10 @@ def purchase_item():
 
     if not user_found:
         return jsonify({'success': False, 'message': '找不到使用者'})
-
-    # 2. Deduct points
     with open(USERS_CSV, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
         writer.writerows(users)
-
-    # 3. Record in inventory
     with open(INVENTORY_CSV, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([username, item_id, datetime.now().isoformat()])
